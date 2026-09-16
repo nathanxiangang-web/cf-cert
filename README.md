@@ -152,4 +152,4 @@ openssl x509 \
 
 ## License
 
-MIT
+Apache License 2.0
