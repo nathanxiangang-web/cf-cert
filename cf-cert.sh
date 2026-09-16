@@ -18,6 +18,16 @@ on_err() {
 }
 trap on_err ERR
 
+has_acme_cron() {
+  local line
+  while IFS= read -r line; do
+    if [[ "$line" == *".acme.sh"* && "$line" == *"--cron"* ]]; then
+      return 0
+    fi
+  done < <(crontab -l 2>/dev/null || true)
+  return 1
+}
+
 if [ "$(id -u)" -ne 0 ]; then
   die "请使用 root 运行，例如：curl -fsSL <RAW_URL> | sudo bash"
 fi
@@ -162,12 +172,12 @@ chmod 600 "$PRIVKEY"
 chmod 644 "$FULLCHAIN"
 
 echo "[5/6] 检查自动续期..."
-if ! crontab -l 2>/dev/null | grep -Fq '/root/.acme.sh/acme.sh'; then
+if ! has_acme_cron; then
   log "未发现 acme.sh cron，正在补充安装自动续期任务..."
   "$ACME" --install-cronjob
 fi
 
-if crontab -l 2>/dev/null | grep -Fq '/root/.acme.sh/acme.sh'; then
+if has_acme_cron; then
   log "自动续期任务已配置"
 else
   die "未检测到 acme.sh 自动续期 cron，请手动检查 crontab"
