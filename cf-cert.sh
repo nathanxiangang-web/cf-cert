@@ -109,16 +109,18 @@ echo "[2/6] 设置 Let's Encrypt..."
 "$ACME" --set-default-ca --server letsencrypt
 
 echo "[3/6] 申请/检查证书..."
-set +e
-"$ACME" \
+ISSUE_RC=0
+if "$ACME" \
   --issue \
   --server letsencrypt \
   --dns dns_cf \
   -d "$DOMAIN" \
   -d "*.${DOMAIN}" \
-  --keylength ec-256
-ISSUE_RC=$?
-set -e
+  --keylength ec-256; then
+  ISSUE_RC=0
+else
+  ISSUE_RC=$?
+fi
 
 case "$ISSUE_RC" in
   0)
