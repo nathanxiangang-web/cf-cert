@@ -178,7 +178,9 @@ if command -v openssl >/dev/null 2>&1; then
   CERT_PUBKEY="$(openssl x509 -in "$FULLCHAIN" -pubkey -noout 2>/dev/null | openssl pkey -pubin -outform pem 2>/dev/null | sha256sum | awk '{print $1}')"
   KEY_PUBKEY="$(openssl pkey -in "$PRIVKEY" -pubout -outform pem 2>/dev/null | sha256sum | awk '{print $1}')"
 
-  [ -n "$CERT_PUBKEY" ] && [ "$CERT_PUBKEY" = "$KEY_PUBKEY" ] || die "证书与私钥不匹配"
+  if [ -z "$CERT_PUBKEY" ] || [ "$CERT_PUBKEY" != "$KEY_PUBKEY" ]; then
+    die "证书与私钥不匹配"
+  fi
   log "证书与私钥匹配"
 else
   log "未检测到 openssl，跳过证书内容校验"
