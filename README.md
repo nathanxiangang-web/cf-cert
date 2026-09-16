@@ -78,8 +78,46 @@ Let's Encrypt DNS-01 验证
     ↓
 检测到 Nginx 时自动 reload
     ↓
-后续由 acme.sh 自动续期
+检查 acme.sh 自动续期 cron
+    ↓
+校验证书文件及证书/私钥匹配
 ```
+
+## 重复运行
+
+脚本支持重复执行。
+
+当同一组域名已经存在有效证书且尚未进入续期窗口时，acme.sh 会返回 `2`（skipped）。脚本会把它视为正常状态，并继续：
+
+```text
+检查现有证书
+    ↓
+重新确认安装路径
+    ↓
+检查自动续期 cron
+    ↓
+验证证书与私钥
+```
+
+因此重复运行不会因为 `Domains not changed. Skipping.` 而提前退出，也不会强制向 Let's Encrypt 重复签发证书。
+
+如确实需要强制重新签发，应直接使用 acme.sh 的 `--force`，不建议日常使用。
+
+## 自动续期
+
+acme.sh 安装时通常会自动创建 cron。脚本还会额外检查 root 的 crontab；若没有发现 acme.sh 的续期任务，会执行：
+
+```bash
+/root/.acme.sh/acme.sh --install-cronjob
+```
+
+可手动检查：
+
+```bash
+crontab -l | grep acme.sh
+```
+
+acme.sh 会定期检查证书，进入续期窗口后自动完成 DNS-01 验证、更新已安装证书，并执行保存的 reload command。
 
 ## Nginx 配置
 
@@ -139,16 +177,23 @@ openssl x509 \
   -ext subjectAltName
 ```
 
+查看 acme.sh 管理的证书：
+
+```bash
+/root/.acme.sh/acme.sh --list
+```
+
 ## 安全说明
 
 - Cloudflare API Token 输入时不会明文显示。
 - 建议 Token 只授予目标 Zone 的 DNS Edit 权限。
 - 不要把 API Token 提交到 GitHub。
+- 私钥安装后权限为 `600`，域名证书目录权限为 `700`。
 - 一键命令会直接执行远程脚本；如需先审查代码，可先打开 `cf-cert.sh` 查看后再运行。
 
 ## 环境
 
-推荐 Linux 服务器，以 root 权限运行。脚本需要 `curl`；如果系统存在 Nginx，会在证书安装后执行配置检查和 reload。
+推荐 Linux 服务器，以 root 权限运行。脚本需要 `curl`；如果系统存在 Nginx，会在证书安装后执行配置检查和 reload。若安装了 `openssl`，脚本会额外验证证书可解析，并确认公钥与私钥匹配。
 
 ## License
 
